@@ -1,0 +1,10 @@
+# eclipse configuration files
+/.cproject
+/.project
+/.externalToolBuilders
+/.settings
+/.pydevproject
+/dependencies.graphml
+/html/
+/build/
+TODO

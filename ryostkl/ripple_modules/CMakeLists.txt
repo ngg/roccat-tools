@@ -1,0 +1,1 @@
+add_compiled_lua(ripple share/roccat/ryostkl_ripple_modules)

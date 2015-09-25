@@ -1,0 +1,443 @@
+/*
+ * This file is part of roccat-tools.
+ *
+ * roccat-tools is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * roccat-tools is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with roccat-tools. If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <string.h>
+#include "ryostkl_profile_data_hardware.h"
+
+gboolean ryostkl_profile_data_hardware_get_modified(RyostklProfileDataHardware const *profile_data) {
+	guint i;
+
+	if (profile_data->modified_keys_primary ||
+			profile_data->modified_keys_function ||
+			profile_data->modified_keys_thumbster ||
+			profile_data->modified_keys_extra ||
+			profile_data->modified_keys_easyzone ||
+			profile_data->modified_key_mask ||
+			profile_data->modified_light ||
+			profile_data->modified_light_macro)
+		return TRUE;
+
+	for (i = 0; i < RYOS_RKP_KEYS_NUM; ++i)
+		if (profile_data->modified_macros[i])
+			return TRUE;
+
+	for (i = 0; i < RYOS_STORED_LIGHTS_LAYER_NUM; ++i)
+		if (profile_data->modified_light_layer_automatic[i] ||
+				profile_data->modified_light_layer_manual[i])
+			return TRUE;
+
+	return FALSE;
+}
+
+static void ryostkl_profile_data_hardware_set_modified_state(RyostklProfileDataHardware *profile_data, gboolean state) {
+	guint i;
+
+	profile_data->modified_keys_primary = state;
+	profile_data->modified_keys_function = state;
+	profile_data->modified_keys_thumbster = state;
+	profile_data->modified_keys_extra = state;
+	profile_data->modified_keys_easyzone = state;
+	profile_data->modified_key_mask = state;
+	profile_data->modified_light = state;
+	profile_data->modified_light_macro = state;
+
+	for (i = 0; i < RYOS_RKP_KEYS_NUM; ++i)
+		profile_data->modified_macros[i] = state;
+
+	for (i = 0; i < RYOS_STORED_LIGHTS_LAYER_NUM; ++i) {
+		profile_data->modified_light_layer_automatic[i] = state;
+		profile_data->modified_light_layer_manual[i] = state;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_modified(RyostklProfileDataHardware *profile_data) {
+	ryostkl_profile_data_hardware_set_modified_state(profile_data, TRUE);
+}
+
+void ryostkl_profile_data_hardware_set_unmodified(RyostklProfileDataHardware *profile_data) {
+	ryostkl_profile_data_hardware_set_modified_state(profile_data, FALSE);
+}
+
+static guchar const default_keys_primary[sizeof(RyosKeysPrimary)] = {
+	0x06, 0x7d, 0x00, 0xaa, 0x29, 0x3a, 0x3c, 0x3e, 0x40, 0x42, 0x43, 0x44, 0x46, 0x53, 0x55, 0x35,
+	0x1e, 0x3b, 0x3d, 0x3f, 0x41, 0x27, 0x2e, 0x45, 0x47, 0x54, 0x56, 0xab, 0x1f, 0x20, 0x21, 0x23,
+	0x25, 0x2d, 0x2f, 0x89, 0x48, 0x5f, 0x61, 0x2b, 0x14, 0x08, 0x22, 0x24, 0x26, 0x12, 0x30, 0x2a,
+	0x49, 0x60, 0x57, 0xac, 0x1a, 0x15, 0x17, 0x1c, 0x0c, 0x13, 0x34, 0x31, 0x4a, 0x5c, 0x5e, 0x39,
+	0x04, 0x07, 0x0a, 0x18, 0x0e, 0x0f, 0x32, 0x28, 0x4b, 0x5d, 0x85, 0xad, 0x16, 0x09, 0x0b, 0x0d,
+	0x10, 0x33, 0x38, 0xe5, 0x4c, 0x59, 0x5b, 0xe1, 0x64, 0x1b, 0x19, 0x11, 0x36, 0x37, 0x87, 0xe4,
+	0x4d, 0x5a, 0x58, 0xae, 0x1d, 0x06, 0x05, 0x8b, 0x8a, 0x90, 0x65, 0x50, 0x4e, 0x62, 0x63, 0xe0,
+	0xe3, 0xe2, 0x91, 0x2c, 0x88, 0xe6, 0xf1, 0x51, 0x52, 0x4f, 0xe7, 0x58, 0x24, };
+static guchar const default_keys_function[sizeof(RyosKeysFunction)] = {
+	0x07, 0x5f, 0x00, 0x3a, 0x00, 0x00, 0x3b, 0x00, 0x00, 0x3c, 0x00, 0x00, 0x3d, 0x00, 0x00, 0x3e,
+	0x00, 0x00, 0x3f, 0x00, 0x00, 0x40, 0x00, 0x00, 0x41, 0x00, 0x00, 0x42, 0x00, 0x00, 0x43, 0x00,
+	0x00, 0x44, 0x00, 0x00, 0x45, 0x00, 0x00, 0x46, 0x00, 0x00, 0x47, 0x00, 0x00, 0x48, 0x00, 0x00,
+	0xd2, 0x00, 0x00, 0xd1, 0x00, 0x00, 0xd0, 0x00, 0x00, 0xc1, 0x00, 0x00, 0xcc, 0x00, 0x00, 0xcf,
+	0x00, 0x00, 0xce, 0x00, 0x00, 0xcd, 0x00, 0x00, 0xc2, 0x00, 0x00, 0xc3, 0x00, 0x00, 0xa3, 0x00,
+	0x00, 0xa7, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x82, 0x00, 0x00, 0xf0, 0x0d, };
+static guchar const default_keys_thumbster[sizeof(RyosKeysThumbster)] = {
+	0x09, 0x17, 0x00, 0xb1, 0x00, 0x00, 0xdd, 0x00, 0x00, 0xb0, 0x00, 0x00, 0x39, 0x00, 0x00, 0xcb,
+	0x00, 0x00, 0xc0, 0x00, 0x00, 0x22, 0x04, };
+static guchar const default_keys_extra[sizeof(RyosKeysExtra)] = { 0x0a, 0x08, 0x00, 0xff, 0xf1, 0x00, 0x02, 0x02, };
+static guchar const default_keys_easyzone[sizeof(RyosKeysEasyzone)] = {
+	0x0b, 0x26, 0x01, 0x00, 0x35, 0x00, 0x00, 0x1e, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x20, 0x00, 0x00,
+	0x21, 0x00, 0x00, 0x22, 0x00, 0x00, 0x23, 0x00, 0x00, 0x24, 0x00, 0x00, 0x25, 0x00, 0x00, 0x26,
+	0x00, 0x00, 0x27, 0x00, 0x00, 0x2d, 0x00, 0x00, 0x2e, 0x00, 0x00, 0x89, 0x00, 0x00, 0x2a, 0x00,
+	0x00, 0x2b, 0x00, 0x00, 0x14, 0x00, 0x00, 0x1a, 0x00, 0x00, 0x08, 0x00, 0x00, 0x15, 0x00, 0x00,
+	0x17, 0x00, 0x00, 0x1c, 0x00, 0x00, 0x18, 0x00, 0x00, 0x0c, 0x00, 0x00, 0x12, 0x00, 0x00, 0x13,
+	0x00, 0x00, 0x2f, 0x00, 0x00, 0x30, 0x00, 0x00, 0x31, 0x00, 0x00, 0x04, 0x00, 0x00, 0x16, 0x00,
+	0x00, 0x07, 0x00, 0x00, 0x09, 0x00, 0x00, 0x0a, 0x00, 0x00, 0x0b, 0x00, 0x00, 0x0d, 0x00, 0x00,
+	0x0e, 0x00, 0x00, 0x0f, 0x00, 0x00, 0x33, 0x00, 0x00, 0x34, 0x00, 0x00, 0x32, 0x00, 0x00, 0x28,
+	0x00, 0x00, 0xe1, 0x00, 0x00, 0x64, 0x00, 0x00, 0x1d, 0x00, 0x00, 0x1b, 0x00, 0x00, 0x06, 0x00,
+	0x00, 0x19, 0x00, 0x00, 0x05, 0x00, 0x00, 0x11, 0x00, 0x00, 0x10, 0x00, 0x00, 0x36, 0x00, 0x00,
+	0x37, 0x00, 0x00, 0x38, 0x00, 0x00, 0x87, 0x00, 0x00, 0xe5, 0x00, 0x00, 0xe0, 0x00, 0x00, 0xe3,
+	0x00, 0x00, 0xe2, 0x00, 0x00, 0x8b, 0x00, 0x00, 0x91, 0x00, 0x00, 0x2c, 0x00, 0x00, 0x90, 0x00,
+	0x00, 0x8a, 0x00, 0x00, 0x88, 0x00, 0x00, 0xe6, 0x00, 0x00, 0x65, 0x00, 0x00, 0xe4, 0x00, 0x00,
+	0x49, 0x00, 0x00, 0x4a, 0x00, 0x00, 0x4b, 0x00, 0x00, 0x4c, 0x00, 0x00, 0x4d, 0x00, 0x00, 0x4e,
+	0x00, 0x00, 0x52, 0x00, 0x00, 0x50, 0x00, 0x00, 0x51, 0x00, 0x00, 0x4f, 0x00, 0x00, 0x53, 0x00,
+	0x00, 0x54, 0x00, 0x00, 0x55, 0x00, 0x00, 0x56, 0x00, 0x00, 0x5f, 0x00, 0x00, 0x60, 0x00, 0x00,
+	0x61, 0x00, 0x00, 0x57, 0x00, 0x00, 0x5c, 0x00, 0x00, 0x5d, 0x00, 0x00, 0x5e, 0x00, 0x00, 0x85,
+	0x00, 0x00, 0x59, 0x00, 0x00, 0x5a, 0x00, 0x00, 0x5b, 0x00, 0x00, 0x58, 0x00, 0x00, 0x62, 0x00,
+	0x00, 0x63, 0x00, 0x00, 0xa2, 0x1a, };
+static guchar const default_key_mask[sizeof(RyosKeyMask)] = { 0x0c, 0x06, 0x00, 0x3f, 0x51, 0x00 };
+static guchar const default_light[sizeof(RyosLight)] = { 0x0d, 0x10, 0x00, 0x04, 0x01, 0x0f, 0xf4, 0x01, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x28, 0x01, };
+static guchar const default_light_layer_normal[sizeof(RyostklLightLayer)] = { 0x17, 0xfd, 0x00, 0x00, 0x00, 0x01, 0x01, 0x01, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x97, 0x0f };
+static guchar const default_light_layer_easy_shift[sizeof(RyostklLightLayer)] = { 0x17, 0xfd, 0x00, 0x00, 0x09, 0x01, 0x01, 0x01, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x80, 0x80, 0x20, 0x05 };
+static guchar const default_light_layer_fn[sizeof(RyostklLightLayer)] = { 0x17, 0xfd, 0x00, 0x00, 0x0a, 0x01, 0x01, 0x01, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xa1, 0x08 };
+
+void ryostkl_profile_data_hardware_set_keys_primary(RyostklProfileDataHardware *profile_data, RyosKeysPrimary const *keys_primary) {
+	if (!ryos_keys_primary_equal(&profile_data->keys_primary, keys_primary)) {
+		ryos_keys_primary_copy(&profile_data->keys_primary, keys_primary);
+		profile_data->modified_keys_primary = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_keys_function(RyostklProfileDataHardware *profile_data, RyosKeysFunction const *keys_function) {
+	if (!ryos_keys_function_equal(&profile_data->keys_function, keys_function)) {
+		ryos_keys_function_copy(&profile_data->keys_function, keys_function);
+		profile_data->modified_keys_function = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_keys_extra(RyostklProfileDataHardware *profile_data, RyosKeysExtra const *keys_extra) {
+	if (!ryos_keys_extra_equal(&profile_data->keys_extra, keys_extra)) {
+		ryos_keys_extra_copy(&profile_data->keys_extra, keys_extra);
+		profile_data->modified_keys_extra = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_keys_thumbster(RyostklProfileDataHardware *profile_data, RyosKeysThumbster const *keys_thumbster) {
+	if (!ryos_keys_thumbster_equal(&profile_data->keys_thumbster, keys_thumbster)) {
+		ryos_keys_thumbster_copy(&profile_data->keys_thumbster, keys_thumbster);
+		profile_data->modified_keys_thumbster = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_keys_easyzone(RyostklProfileDataHardware *profile_data, RyosKeysEasyzone const *keys_easyzone) {
+	if (!ryos_keys_easyzone_equal(&profile_data->keys_easyzone, keys_easyzone)) {
+		ryos_keys_easyzone_copy(&profile_data->keys_easyzone, keys_easyzone);
+		profile_data->modified_keys_easyzone = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_macro(RyostklProfileDataHardware *profile_data, guint index, RyosMacro const *macro) {
+	if (!ryos_macro_equal(&profile_data->macros[index], macro)) {
+		ryos_macro_copy(&profile_data->macros[index], macro);
+		profile_data->modified_macros[index] = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_key_mask(RyostklProfileDataHardware *profile_data, RyosKeyMask const *key_mask) {
+	if (!ryos_key_mask_equal(&profile_data->key_mask, key_mask)) {
+		ryos_key_mask_copy(&profile_data->key_mask, key_mask);
+		profile_data->modified_key_mask = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_light(RyostklProfileDataHardware *profile_data, RyosLight const *light) {
+	if (!ryos_light_equal(&profile_data->light, light)) {
+		ryos_light_copy(&profile_data->light, light);
+		profile_data->modified_light = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_light_macro(RyostklProfileDataHardware *profile_data, RyosMacro const *light_macro) {
+	if (!ryos_macro_equal(&profile_data->light_macro, light_macro)) {
+		ryos_macro_copy(&profile_data->light_macro, light_macro);
+		profile_data->modified_light_macro = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_light_layer_automatic(RyostklProfileDataHardware *profile_data, guint index, RyostklLightLayer const *light_layer) {
+	if (!ryostkl_light_layer_equal(&profile_data->light_layer_automatic[index], light_layer)) {
+		ryostkl_light_layer_copy(&profile_data->light_layer_automatic[index], light_layer);
+		profile_data->modified_light_layer_automatic[index] = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_set_light_layer_manual(RyostklProfileDataHardware *profile_data, guint index, RyostklLightLayer const *light_layer) {
+	if (!ryostkl_light_layer_equal(&profile_data->light_layer_manual[index], light_layer)) {
+		ryostkl_light_layer_copy(&profile_data->light_layer_manual[index], light_layer);
+		profile_data->modified_light_layer_manual[index] = TRUE;
+	}
+}
+
+void ryostkl_profile_data_hardware_update_with_default(RyostklProfileDataHardware *profile_data) {
+	guint index;
+
+	memset(profile_data, 0, sizeof(RyostklProfileDataHardware));
+
+	ryostkl_profile_data_hardware_set_keys_primary(profile_data, (RyosKeysPrimary const *)default_keys_primary);
+	ryostkl_profile_data_hardware_set_keys_function(profile_data, (RyosKeysFunction const *)default_keys_function);
+	ryostkl_profile_data_hardware_set_keys_extra(profile_data, (RyosKeysExtra const *)default_keys_extra);
+	ryostkl_profile_data_hardware_set_key_mask(profile_data, (RyosKeyMask const *)default_key_mask);
+
+	ryostkl_profile_data_hardware_set_light(profile_data, (RyosLight const *)default_light);
+	/* defaults don't contain light_macro */
+
+	ryostkl_profile_data_hardware_set_keys_thumbster(profile_data, (RyosKeysThumbster const *)default_keys_thumbster);
+	ryostkl_profile_data_hardware_set_keys_easyzone(profile_data, (RyosKeysEasyzone const *)default_keys_easyzone);
+	/* defaults don't contain macros */
+
+	ryostkl_profile_data_hardware_set_light_layer_automatic(profile_data, RYOS_STORED_LIGHTS_LAYER_NORMAL, (RyostklLightLayer const *)default_light_layer_normal);
+	ryostkl_profile_data_hardware_set_light_layer_automatic(profile_data, RYOS_STORED_LIGHTS_LAYER_EASY_SHIFT, (RyostklLightLayer const *)default_light_layer_easy_shift);
+	ryostkl_profile_data_hardware_set_light_layer_automatic(profile_data, RYOS_STORED_LIGHTS_LAYER_FN, (RyostklLightLayer const *)default_light_layer_fn);
+
+	for (index = RYOS_STORED_LIGHTS_LAYER_NORMAL; index <RYOS_STORED_LIGHTS_LAYER_EASY_SHIFT; ++index)
+		ryostkl_profile_data_hardware_set_light_layer_manual(profile_data, index, (RyostklLightLayer const *)default_light_layer_normal);
+	ryostkl_profile_data_hardware_set_light_layer_manual(profile_data, RYOS_STORED_LIGHTS_LAYER_EASY_SHIFT, (RyostklLightLayer const *)default_light_layer_easy_shift);
+	ryostkl_profile_data_hardware_set_light_layer_manual(profile_data, RYOS_STORED_LIGHTS_LAYER_FN, (RyostklLightLayer const *)default_light_layer_fn);
+
+	ryostkl_profile_data_hardware_set_modified(profile_data);
+}
+
+gboolean ryostkl_profile_data_hardware_update(RyostklProfileDataHardware *profile_data, RoccatDevice *device, guint profile_index, GError **error) {
+	guint index;
+	guint macro_index;
+	void *pointer;
+
+	ryostkl_profile_data_hardware_set_modified(profile_data);
+
+	pointer = ryos_keys_primary_read(device, profile_index, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_keys_primary(profile_data, (RyosKeysPrimary const *)pointer);
+	g_free(pointer);
+
+	pointer = ryos_keys_function_read(device, profile_index, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_keys_function(profile_data, (RyosKeysFunction const *)pointer);
+	g_free(pointer);
+
+	pointer = ryos_keys_extra_read(device, profile_index, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_keys_extra(profile_data, (RyosKeysExtra const *)pointer);
+	g_free(pointer);
+
+	pointer = ryos_keys_thumbster_read(device, profile_index, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_keys_thumbster(profile_data, (RyosKeysThumbster const *)pointer);
+	g_free(pointer);
+
+	for (index = 0; index < RYOS_KEYS_THUMBSTER_NUM * 2; ++index) {
+		macro_index = ryos_keys_thumbster_index_to_macro_index(index);
+		if (profile_data->keys_thumbster.keys[index].type == RYOS_KEY_TYPE_MACRO) {
+			pointer = ryos_macro_read(device, profile_index, macro_index, error);
+			if (!pointer)
+				return FALSE;
+			ryostkl_profile_data_hardware_set_macro(profile_data, macro_index, (RyosMacro const *)pointer);
+			g_free(pointer);
+		}
+	}
+
+	pointer = ryos_keys_easyzone_read(device, profile_index, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_keys_easyzone(profile_data, (RyosKeysEasyzone const *)pointer);
+	g_free(pointer);
+
+	for (index = 0; index < RYOS_KEYS_EASYZONE_NUM; ++index) {
+		macro_index = ryos_keys_easyzone_index_to_macro_index(index);
+		if (profile_data->keys_easyzone.keys[index].type == RYOS_KEY_TYPE_MACRO) {
+			pointer = ryos_macro_read(device, profile_index, macro_index, error);
+			if (!pointer)
+				return FALSE;
+			ryostkl_profile_data_hardware_set_macro(profile_data, macro_index, (RyosMacro const *)pointer);
+			g_free(pointer);
+		}
+	}
+
+	pointer = ryos_key_mask_read(device, profile_index, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_key_mask(profile_data, (RyosKeyMask const *)pointer);
+	g_free(pointer);
+
+	pointer = ryos_light_read(device, profile_index, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_light(profile_data, (RyosLight const *)pointer);
+	g_free(pointer);
+
+	if (profile_data->light.dimness_type == RYOS_LIGHT_DIMNESS_TYPE_MACRO) {
+		pointer = ryos_light_macro_read(device, profile_index, error);
+		if (!pointer)
+			return FALSE;
+		ryostkl_profile_data_hardware_set_light_macro(profile_data, (RyosMacro const *)pointer);
+		g_free(pointer);
+	}
+
+	pointer = ryostkl_light_layer_read(device, profile_index, RYOS_ILLUMINATION_MODE_AUTOMATIC, RYOS_STORED_LIGHTS_LAYER_NORMAL, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_light_layer_automatic(profile_data, RYOS_STORED_LIGHTS_LAYER_NORMAL, (RyostklLightLayer const *)pointer);
+	g_free(pointer);
+
+	pointer = ryostkl_light_layer_read(device, profile_index, RYOS_ILLUMINATION_MODE_AUTOMATIC, RYOS_STORED_LIGHTS_LAYER_EASY_SHIFT, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_light_layer_automatic(profile_data, RYOS_STORED_LIGHTS_LAYER_EASY_SHIFT, (RyostklLightLayer const *)pointer);
+	g_free(pointer);
+
+	pointer = ryostkl_light_layer_read(device, profile_index, RYOS_ILLUMINATION_MODE_AUTOMATIC, RYOS_STORED_LIGHTS_LAYER_FN, error);
+	if (!pointer)
+		return FALSE;
+	ryostkl_profile_data_hardware_set_light_layer_automatic(profile_data, RYOS_STORED_LIGHTS_LAYER_FN, (RyostklLightLayer const *)pointer);
+	g_free(pointer);
+
+	for (index = 0; index < RYOS_STORED_LIGHTS_LAYER_NUM; ++index) {
+		pointer = ryostkl_light_layer_read(device, profile_index, RYOS_ILLUMINATION_MODE_MANUAL, index, error);
+		if (!pointer)
+			return FALSE;
+		ryostkl_profile_data_hardware_set_light_layer_manual(profile_data, index, (RyostklLightLayer const *)pointer);
+		g_free(pointer);
+	}
+
+	ryostkl_profile_data_hardware_set_unmodified(profile_data);
+	return TRUE;
+}
+
+gboolean ryostkl_profile_data_hardware_save(RoccatDevice *device, RyostklProfileDataHardware *profile_data, guint profile_index, GError **error) {
+	guint index;
+	guint macro_index;
+
+	if (profile_data->modified_keys_primary)
+		if (!ryos_keys_primary_write(device, profile_index, &profile_data->keys_primary, error))
+			return FALSE;
+
+	if (profile_data->modified_keys_function)
+		if (!ryos_keys_function_write(device, profile_index, &profile_data->keys_function, error))
+			return FALSE;
+
+	if (profile_data->modified_keys_extra)
+		if (!ryos_keys_extra_write(device, profile_index, &profile_data->keys_extra, error))
+			return FALSE;
+
+	if (profile_data->modified_keys_thumbster)
+		if (!ryos_keys_thumbster_write(device, profile_index, &profile_data->keys_thumbster, error))
+			return FALSE;
+
+	for (index = 0; index < RYOS_KEYS_THUMBSTER_NUM * 2; ++index) {
+		macro_index = ryos_keys_thumbster_index_to_macro_index(index);
+		if (profile_data->keys_thumbster.keys[index].type == RYOS_KEY_TYPE_MACRO && profile_data->modified_macros[macro_index]) {
+			if (!ryos_macro_write(device, profile_index, macro_index, &profile_data->macros[macro_index], error))
+				return FALSE;
+		}
+	}
+
+	if (profile_data->modified_keys_easyzone)
+		if (!ryos_keys_easyzone_write(device, profile_index, &profile_data->keys_easyzone, error))
+			return FALSE;
+
+	for (index = 0; index < RYOS_KEYS_EASYZONE_NUM; ++index) {
+		macro_index = ryos_keys_easyzone_index_to_macro_index(index);
+		if (profile_data->keys_easyzone.keys[index].type == RYOS_KEY_TYPE_MACRO && profile_data->modified_macros[macro_index]) {
+			if (!ryos_macro_write(device, profile_index, macro_index, &profile_data->macros[macro_index], error))
+				return FALSE;
+		}
+	}
+
+	if (profile_data->modified_key_mask)
+		if (!ryos_key_mask_write(device, profile_index, &profile_data->key_mask, error))
+			return FALSE;
+
+	if (profile_data->modified_light)
+		if (!ryos_light_write(device, profile_index, &profile_data->light, error))
+			return FALSE;
+
+	if (profile_data->light.dimness_type == RYOS_LIGHT_DIMNESS_TYPE_MACRO && profile_data->modified_light_macro) {
+		if (!ryos_light_macro_write(device, profile_index, &profile_data->light_macro, error))
+			return FALSE;
+	}
+
+	if (profile_data->modified_light_layer_automatic[RYOS_STORED_LIGHTS_LAYER_NORMAL])
+		if (!ryostkl_light_layer_write(device, profile_index, RYOS_ILLUMINATION_MODE_AUTOMATIC, RYOS_STORED_LIGHTS_LAYER_NORMAL, &profile_data->light_layer_automatic[RYOS_STORED_LIGHTS_LAYER_NORMAL], error))
+			return FALSE;
+
+	if (profile_data->modified_light_layer_automatic[RYOS_STORED_LIGHTS_LAYER_EASY_SHIFT])
+		if (!ryostkl_light_layer_write(device, profile_index, RYOS_ILLUMINATION_MODE_AUTOMATIC, RYOS_STORED_LIGHTS_LAYER_EASY_SHIFT, &profile_data->light_layer_automatic[RYOS_STORED_LIGHTS_LAYER_EASY_SHIFT], error))
+			return FALSE;
+
+	if (profile_data->modified_light_layer_automatic[RYOS_STORED_LIGHTS_LAYER_FN])
+		if (!ryostkl_light_layer_write(device, profile_index, RYOS_ILLUMINATION_MODE_AUTOMATIC, RYOS_STORED_LIGHTS_LAYER_FN, &profile_data->light_layer_automatic[RYOS_STORED_LIGHTS_LAYER_FN], error))
+			return FALSE;
+
+	for (index = 0; index < RYOS_STORED_LIGHTS_LAYER_NUM; ++index) {
+		if (profile_data->modified_light_layer_manual[index])
+			if (!ryostkl_light_layer_write(device, profile_index, RYOS_ILLUMINATION_MODE_MANUAL, index, &profile_data->light_layer_manual[index], error))
+				return FALSE;
+	}
+
+	ryostkl_profile_data_hardware_set_unmodified(profile_data);
+	return TRUE;
+}
+
+void ryostkl_profile_data_hardware_set_key_to_macro(RyostklProfileDataHardware *profile_data, guint macro_index) {
+	RyosKey *key;
+
+	if (ryos_macro_index_is_keys_easyzone(macro_index)) {
+		key = &profile_data->keys_easyzone.keys[ryos_macro_index_to_keys_easyzone_index(macro_index)];
+		if (key->type != RYOS_KEY_TYPE_MACRO) {
+			ryos_key_set_to_normal(key, RYOS_KEY_TYPE_MACRO);
+			profile_data->modified_keys_easyzone = TRUE;
+		}
+	} else if (ryos_macro_index_is_keys_thumbster(macro_index)) {
+		key = &profile_data->keys_thumbster.keys[ryos_macro_index_to_keys_thumbster_index(macro_index)];
+		if (key->type != RYOS_KEY_TYPE_MACRO) {
+			ryos_key_set_to_normal(key, RYOS_KEY_TYPE_MACRO);
+			profile_data->modified_keys_thumbster = TRUE;
+		}
+	} else {
+		; // TODO error
+	}
+}
+
+void ryostkl_profile_data_hardware_set_key_to_macro_without_modified(RyostklProfileDataHardware *profile_data, guint macro_index) {
+	RyosKey *key;
+
+	if (ryos_macro_index_is_keys_easyzone(macro_index)) {
+		key = &profile_data->keys_easyzone.keys[ryos_macro_index_to_keys_easyzone_index(macro_index)];
+		ryos_key_set_to_normal(key, RYOS_KEY_TYPE_MACRO);
+	} else if (ryos_macro_index_is_keys_thumbster(macro_index)) {
+		key = &profile_data->keys_thumbster.keys[ryos_macro_index_to_keys_thumbster_index(macro_index)];
+		ryos_key_set_to_normal(key, RYOS_KEY_TYPE_MACRO);
+	} else {
+		; // TODO error
+	}
+}
